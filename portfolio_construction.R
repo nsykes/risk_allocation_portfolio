@@ -2,63 +2,64 @@ library(readr)
 library(xts)
 
 # importing all data, removing PERMNO column, formatting date
-VCR <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VCR.csv", 
+VCR <- read_csv("VCR.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VDC <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VDC.csv", 
+VDC <- read_csv("VDC.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VDE <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VDE.csv", 
+VDE <- read_csv("VDE.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VFH <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VFH.csv", 
+VFH <- read_csv("VFH.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VHT <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VHT.csv", 
+VHT <- read_csv("VHT.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VIS <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VIS.csv", 
+VIS <- read_csv("VIS.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VGT <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VGT.csv", 
+VGT <- read_csv("VGT.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VAW <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VAW.csv", 
+VAW <- read_csv("VAW.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VNQ <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VNQ.csv", 
+VNQ <- read_csv("VNQ.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
-VOX <- read_csv("Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/VOX.csv", 
+VOX <- read_csv("VOX.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
+VPU <- read_csv("VPU.csv", 
+                col_types = cols(PERMNO = col_skip(), 
+                                 date = col_datetime(format = "%Y%m%d")))
+
 # fix VOX
 VOX <- VOX[1:3335,]
-VPU <- read_csv("Dropbox/MIT/Freshman Year/15.417/Portfolio/VPU.csv", 
-                col_types = cols(PERMNO = col_skip(), 
-                                 date = col_datetime(format = "%Y%m%d")))
 
 # put all returns into one time series
 ETF.R <- data.frame(VCR$RET, VDC$RET, VDE$RET, VFH$RET, VHT$RET, VIS$RET, VGT$RET, VAW$RET, VNQ$RET, VOX$RET, VPU$RET)
 colnames(ETF.R) <- c("VCR", "VDC", "VDE", "VFH", "VHT", "VIS", "VGT", "VAW", "VNQ", "VOX", "VPU")
 
 # compute covariance
-cv <- cov(ETF.R)
-cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
+# cv <- cov(ETF.R)
+# cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
 
 # capital allocation of S&P 500 - same order as ETF.R
 allocation <- c(0.1270, 0.0750, 0.0550, 0.15, 0.1380, 0.1020, 0.2520, 0.0290, 0.0260, 0.0190, 0.0270)
-cap.returns <- ETF.R * allocation
-cap.R.annual <- (mean(cap.returns$VCR) + mean(cap.returns$VDC) + mean(cap.returns$VDE) + mean(cap.returns$VFH) +
-                   mean(cap.returns$VHT) + mean(cap.returns$VIS) + mean(cap.returns$VGT) + mean(cap.returns$VAW) +
-                   mean(cap.returns$VNQ) + mean(cap.returns$VOX) + mean(cap.returns$VPU)) * 252
+# cap.returns <- ETF.R * allocation
+# cap.R.annual <- (mean(cap.returns$VCR) + mean(cap.returns$VDC) + mean(cap.returns$VDE) + mean(cap.returns$VFH) +
+#                    mean(cap.returns$VHT) + mean(cap.returns$VIS) + mean(cap.returns$VGT) + mean(cap.returns$VAW) +
+#                    mean(cap.returns$VNQ) + mean(cap.returns$VOX) + mean(cap.returns$VPU)) * 252
 
 # risk allocation of S&P 500 - same order
-risk.allocation <- (allocation/cv.risks)/sum(allocation/cv.risks)
-risk.returns <- ETF.R * risk.allocation
-risk.R.annual <- (mean(risk.returns$VCR) + mean(risk.returns$VDC) + mean(risk.returns$VDE) + mean(risk.returns$VFH) +
-                   mean(risk.returns$VHT) + mean(risk.returns$VIS) + mean(risk.returns$VGT) + mean(risk.returns$VAW) +
-                   mean(risk.returns$VNQ) + mean(risk.returns$VOX) + mean(risk.returns$VPU)) * 252
+# risk.allocation <- (allocation/cv.risks)/sum(allocation/cv.risks)
+# risk.returns <- ETF.R * risk.allocation
+# risk.R.annual <- (mean(risk.returns$VCR) + mean(risk.returns$VDC) + mean(risk.returns$VDE) + mean(risk.returns$VFH) +
+#                    mean(risk.returns$VHT) + mean(risk.returns$VIS) + mean(risk.returns$VGT) + mean(risk.returns$VAW) +
+#                    mean(risk.returns$VNQ) + mean(risk.returns$VOX) + mean(risk.returns$VPU)) * 252
 
 rebal.risk <- function(dates, returns, desired, days) {
   # dates           | column of dates
@@ -75,7 +76,7 @@ rebal.risk <- function(dates, returns, desired, days) {
   while (i <= nrow(returns)) {
     # case: first time
     if (i == days + 1) {
-      # 30 day trailing window
+      # x day trailing window
       trailing.window <- returns[(i-days):(i-1),]
       # compute covariance, convert to normalized risk
       cv <- cov(trailing.window)
@@ -100,8 +101,12 @@ rebal.risk <- function(dates, returns, desired, days) {
     }
     # case: rebalance (at end of day)
     if (i %% days == 0) {
-      # 30 day trailing window
-      trailing.window <- returns[(i-days):(i-1),]
+      # 9-month trailing window
+      lower.bound <- i - 189
+      if (lower.bound < 1) {
+        lower.bound = 1
+      }
+      trailing.window <- returns[lower.bound:(i-1),]
       # compute covariance, convert to normalized risk
       cv <- cov(trailing.window)
       cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
@@ -165,5 +170,5 @@ rebal.cap <- function(dates, returns, desired, days) {
 
 # testing function
 dates <- VOX$date
-portfolio.R <- rebal.risk(dates, ETF.R, allocation, 25)
-benchmark <- rebal.cap(dates, ETF.R, allocation, 25)
+portfolio.R <- rebal.risk(dates, ETF.R, allocation, 21)
+benchmark <- rebal.cap(dates, ETF.R, allocation, 21)
