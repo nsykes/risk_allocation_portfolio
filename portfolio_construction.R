@@ -83,8 +83,8 @@ rebal.risk <- function(dates, returns, desired, days) {
       cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
       # change risks to capital allocation
       current.alloc <- (desired/cv.risks)/sum(desired/cv.risks)
-      # total return for the day, initial price ($1000)
-      portfolio.R <- data.frame(1000, sum(returns[i,] * current.alloc))
+      # total return for the day, initial price ($1,000,000)
+      portfolio.R <- data.frame(1000000, sum(returns[i,] * current.alloc))
       colnames(portfolio.R) <- c("PRC", "RTN")
     } else {
       # adjust current allocation
@@ -139,8 +139,8 @@ rebal.cap <- function(dates, returns, desired, days) {
     # case: first time
     if (i == days + 1) {
       current.alloc <- desired
-      # total return for the day, initial price ($1000)
-      portfolio.R <- data.frame(1000, sum(returns[i,] * current.alloc))
+      # total return for the day, initial price ($1,000,000)
+      portfolio.R <- data.frame(1000000, sum(returns[i,] * current.alloc))
       colnames(portfolio.R) <- c("PRC", "RTN")
     } else {
       # adjust current allocation
@@ -172,3 +172,7 @@ rebal.cap <- function(dates, returns, desired, days) {
 dates <- VOX$date
 portfolio.R <- rebal.risk(dates, ETF.R, allocation, 21)
 benchmark <- rebal.cap(dates, ETF.R, allocation, 21)
+# Sharpe Ratio calculations
+SR.portfolio <-(mean(portfolio.R$RTN) * 252)/(sd(portfolio.R$RTN) * sqrt(252))
+SR.benchmark <- (mean(benchmark$RTN) * 252)/(sd(benchmark$RTN) * sqrt(252))
+(mean(portfolio.R$RTN) * 252)/(sd(portfolio.R$RTN) * sqrt(252))
