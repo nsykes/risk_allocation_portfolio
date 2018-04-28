@@ -1,7 +1,20 @@
+###                                           ###
+###     15.417 Laboratory in Investments      ###
+###                Spring 2018                ###
+###               Final Project               ###
+
+# Required Packages
 library(readr)
 library(xts)
+library(quantmod)
+library(ggplot2)
+library(reshape)
+library(scales)
 
-# importing all data, removing PERMNO column, formatting date
+# Working Directory (change as necessary)
+setwd('/home/nyle/Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/')
+
+# Import Data
 VCR <- read_csv("VCR.csv", 
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
@@ -36,38 +49,48 @@ VPU <- read_csv("VPU.csv",
                 col_types = cols(PERMNO = col_skip(), 
                                  date = col_datetime(format = "%Y%m%d")))
 
-# fix VOX
+# Load Data for S&P500
+symbol="^GSPC" 
+startday=as.Date("2004-10-04")
+endday=as.Date("2017-12-30")
+getSymbols(symbol, src = "yahoo",from = startday, to = endday)
+
+# Clean Data
+VCR[6,]$PRC <- -VCR[6,]$PRC
+rows <- c(25, 43, 59, 89, 102)
+VIS[rows,]$PRC <- -VIS[rows,]$PRC
 VOX <- VOX[1:3335,]
 
-# put all returns into one time series
+# Time Series of all Returns
 ETF.R <- data.frame(VCR$RET, VDC$RET, VDE$RET, VFH$RET, VHT$RET, VIS$RET, VGT$RET, VAW$RET, VNQ$RET, VOX$RET, VPU$RET)
 colnames(ETF.R) <- c("VCR", "VDC", "VDE", "VFH", "VHT", "VIS", "VGT", "VAW", "VNQ", "VOX", "VPU")
 
-# compute covariance
+# Covariance Calculation
 # cv <- cov(ETF.R)
 # cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
 
-# capital allocation of S&P 500 - same order as ETF.R
+# Capital Allocation of S&P500 - (same order as ETF.R)
 allocation <- c(0.1270, 0.0750, 0.0550, 0.15, 0.1380, 0.1020, 0.2520, 0.0290, 0.0260, 0.0190, 0.0270)
 # cap.returns <- ETF.R * allocation
 # cap.R.annual <- (mean(cap.returns$VCR) + mean(cap.returns$VDC) + mean(cap.returns$VDE) + mean(cap.returns$VFH) +
 #                    mean(cap.returns$VHT) + mean(cap.returns$VIS) + mean(cap.returns$VGT) + mean(cap.returns$VAW) +
 #                    mean(cap.returns$VNQ) + mean(cap.returns$VOX) + mean(cap.returns$VPU)) * 252
 
-# risk allocation of S&P 500 - same order
+# risk allocation of S&P500 - same order
 # risk.allocation <- (allocation/cv.risks)/sum(allocation/cv.risks)
 # risk.returns <- ETF.R * risk.allocation
 # risk.R.annual <- (mean(risk.returns$VCR) + mean(risk.returns$VDC) + mean(risk.returns$VDE) + mean(risk.returns$VFH) +
 #                    mean(risk.returns$VHT) + mean(risk.returns$VIS) + mean(risk.returns$VGT) + mean(risk.returns$VAW) +
 #                    mean(risk.returns$VNQ) + mean(risk.returns$VOX) + mean(risk.returns$VPU)) * 252
 
+# Portfolio Function
 rebal.risk <- function(dates, returns, desired, days) {
   # dates           | column of dates
   # returns         | simple returns for all securities
   # desired         | desired risk allocation
   # days            | days before rebalancing
   # portfolio return
-  portfolio.R <- data.frame()
+  portfolio <- data.frame()
   # current allocation
   current.alloc <- data.frame()
   # counter variable
@@ -83,9 +106,9 @@ rebal.risk <- function(dates, returns, desired, days) {
       cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
       # change risks to capital allocation
       current.alloc <- (desired/cv.risks)/sum(desired/cv.risks)
-      # total return for the day, initial price ($1,000,000)
-      portfolio.R <- data.frame(1000000, sum(returns[i,] * current.alloc))
-      colnames(portfolio.R) <- c("PRC", "RTN")
+      # total return for the day, initial price ($1130.56)
+      portfolio <- data.frame(1130.56, sum(returns[i,] * current.alloc))
+      colnames(portfolio) <- c("PRC", "RTN")
     } else {
       # adjust current allocation
       # yesterday's allocation * yesterday's returns, then normalize
@@ -93,11 +116,11 @@ rebal.risk <- function(dates, returns, desired, days) {
       # get day's return
       day.R <- sum(returns[i,] * current.alloc)
       # calculate today's price from yesterday's price and yesterday's return
-      day.PRC <- portfolio.R$PRC[i-days-1] * (1 + portfolio.R$RTN[i-days-1])
+      day.PRC <- portfolio$PRC[i-days-1] * (1 + portfolio$RTN[i-days-1])
       # combine into data.frame and merge
       day.DF <- data.frame(day.PRC, day.R)
       colnames(day.DF) <- c("PRC", "RTN")
-      portfolio.R <- rbind(portfolio.R, day.DF)
+      portfolio <- rbind(portfolio, day.DF)
     }
     # case: rebalance (at end of day)
     if (i %% days == 0) {
@@ -115,21 +138,20 @@ rebal.risk <- function(dates, returns, desired, days) {
     }
     i <- i + 1
   }
-  portfolio.R <- cbind(dates[(days + 1):length(dates)], portfolio.R)
-  colnames(portfolio.R) <- c("date", "PRC", "RTN")
+  portfolio <- cbind(dates[(days + 1):length(dates)], portfolio)
+  colnames(portfolio) <- c("date", "PRC", "RTN")
   # convert to XTS object
-  return <- xts(portfolio.R[,-1],order.by=portfolio.R$date)
+  return <- xts(portfolio[,-1],order.by=portfolio$date)
   return
 }
 
-# benchmark function
+# Benchmark Function
 rebal.cap <- function(dates, returns, desired, days) {
   # dates           | column of dates
   # returns         | simple returns for all securities
   # desired         | desired risk allocation
   # days            | days before rebalancing
-  # portfolio return
-  portfolio.R <- data.frame()
+  portfolio <- data.frame()
   # current allocation
   current.alloc <- data.frame()
   # counter variable
@@ -139,9 +161,9 @@ rebal.cap <- function(dates, returns, desired, days) {
     # case: first time
     if (i == days + 1) {
       current.alloc <- desired
-      # total return for the day, initial price ($1,000,000)
-      portfolio.R <- data.frame(1000000, sum(returns[i,] * current.alloc))
-      colnames(portfolio.R) <- c("PRC", "RTN")
+      # total return for the day, initial price ($1130.56)
+      portfolio <- data.frame(1130.56, sum(returns[i,] * current.alloc))
+      colnames(portfolio) <- c("PRC", "RTN")
     } else {
       # adjust current allocation
       # yesterday's allocation * yesterday's returns, then normalize
@@ -149,11 +171,11 @@ rebal.cap <- function(dates, returns, desired, days) {
       # get day's return
       day.R <- sum(returns[i,] * current.alloc)
       # calculate today's price from yesterday's price and yesterday's return
-      day.PRC <- portfolio.R$PRC[i-days-1] * (1 + portfolio.R$RTN[i-days-1])
+      day.PRC <- portfolio$PRC[i-days-1] * (1 + portfolio$RTN[i-days-1])
       # combine into data.frame and merge
       day.DF <- data.frame(day.PRC, day.R)
       colnames(day.DF) <- c("PRC", "RTN")
-      portfolio.R <- rbind(portfolio.R, day.DF)
+      portfolio <- rbind(portfolio, day.DF)
     }
     # case: rebalance (at end of day)
     if (i %% days == 0) {
@@ -161,18 +183,45 @@ rebal.cap <- function(dates, returns, desired, days) {
     }
     i <- i + 1
   }
-  portfolio.R <- cbind(dates[(days + 1):length(dates)], portfolio.R)
-  colnames(portfolio.R) <- c("date", "PRC", "RTN")
+  portfolio <- cbind(dates[(days + 1):length(dates)], portfolio)
+  colnames(portfolio) <- c("date", "PRC", "RTN")
   # convert to XTS object
-  return <- xts(portfolio.R[,-1],order.by=portfolio.R$date)
+  return <- xts(portfolio[,-1],order.by=portfolio$date)
   return
 }
 
-# testing function
-dates <- VOX$date
-portfolio.R <- rebal.risk(dates, ETF.R, allocation, 21)
-benchmark <- rebal.cap(dates, ETF.R, allocation, 21)
-# Sharpe Ratio calculations
-SR.portfolio <-(mean(portfolio.R$RTN) * 252)/(sd(portfolio.R$RTN) * sqrt(252))
-SR.benchmark <- (mean(benchmark$RTN) * 252)/(sd(benchmark$RTN) * sqrt(252))
-(mean(portfolio.R$RTN) * 252)/(sd(portfolio.R$RTN) * sqrt(252))
+# S&P500 Benchmark
+GSPC.r <- diff(log(GSPC$GSPC.Adjusted))[22:nrow(GSPC)]
+
+# Testing Function
+dates <- VCR$date
+portfolio <- rebal.risk(dates, ETF.R, allocation, 21)
+# benchmark <- rebal.cap(dates, ETF.R, allocation, 21)
+
+# Sharpe Ratio
+SR.portfolio <-(mean(portfolio$RTN) * 252)/(sd(portfolio$RTN) * sqrt(252))
+SR.benchmark <-(mean(GSPC.r$GSPC.Adjusted) * 252)/(sd(GSPC.r$GSPC.Adjusted) * sqrt(252))
+# SR.benchmark <- (mean(benchmark$RTN) * 252)/(sd(benchmark$RTN) * sqrt(252))
+
+###############################################
+
+# Graph
+
+# extract price data
+GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)]
+portfolio.PRC <- portfolio$PRC
+# define time series
+date <- dates[22:length(dates)]
+ts = data.frame("Date" = date,  SP500 = GSPC.PRC,  Portfolio = portfolio.PRC)
+colnames(ts) = c("Date", "SP500", "Portfolio")
+# data pre-process (melt into ggplot compatible form)
+ts <- melt(ts, id.vars = "Date", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Assets", value.name = "Price")
+ts$Date = as.Date(ts$Date, format = "%Y.%m.%d")
+colnames(ts) = c("Date", "Assets", "Price")
+
+# ggplot
+p <- ggplot(ts,aes(x= Date, y = Price, group = Assets))
+colour_labels = c("violet","green")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
+p <- p + geom_line(aes(colour= Assets, linetype = "solid"),size = 1.1)
+p <- p + labs(x="Date", y="Price")+scale_x_date(breaks = date_breaks("2 years"),labels = date_format("%Y %m"))+ ggtitle("Comparison Between SP500 and Portfolio")
+p
