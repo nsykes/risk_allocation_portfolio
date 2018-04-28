@@ -1,7 +1,9 @@
+#################################################
 ###                                           ###
 ###     15.417 Laboratory in Investments      ###
 ###                Spring 2018                ###
 ###               Final Project               ###
+#################################################
 
 # Required Packages
 library(readr)
@@ -10,6 +12,10 @@ library(quantmod)
 library(ggplot2)
 library(reshape)
 library(scales)
+
+###############################################
+###               Data Import               ###
+###############################################
 
 # Working Directory (change as necessary)
 setwd('/home/nyle/Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/')
@@ -82,6 +88,10 @@ allocation <- c(0.1270, 0.0750, 0.0550, 0.15, 0.1380, 0.1020, 0.2520, 0.0290, 0.
 # risk.R.annual <- (mean(risk.returns$VCR) + mean(risk.returns$VDC) + mean(risk.returns$VDE) + mean(risk.returns$VFH) +
 #                    mean(risk.returns$VHT) + mean(risk.returns$VIS) + mean(risk.returns$VGT) + mean(risk.returns$VAW) +
 #                    mean(risk.returns$VNQ) + mean(risk.returns$VOX) + mean(risk.returns$VPU)) * 252
+
+###############################################
+###               Functions                 ###
+###############################################
 
 # Portfolio Function
 rebal.risk <- function(dates, returns, desired, days) {
@@ -190,6 +200,62 @@ rebal.cap <- function(dates, returns, desired, days) {
   return
 }
 
+###############################################
+###           Simulated Scenarios           ###
+###############################################
+
+# normal crash (+15% volatility)
+# 6 months normal,
+# 7 days (-3%, -, -3%, -, -1%, -, -1%) (cumulative -7.78%)
+# 2 months (0.19309% each day)
+sim.crash.1 <- function(returns) {
+  # returns         | 12 months of returns
+  # 6 months = day 126
+  returns[126:132] <- returns[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
+  # counter variable
+  i <- 133
+  # recovery period
+  while (i <= 175) {
+    returns[i] <- returns[i] + 0.0019309
+    i <- i + 1
+  }
+  # volatility
+  i <- 126
+  while (i <= 175) {
+    returns[i] <- returns[i] * 1.15
+    i <- i + 1
+  }
+  returns
+}
+
+# large crash (+30% volatility)
+# 6 months normal
+# 9 days (-4%, -, -2%, -, -2%, -, -2%, -, -2%) (cumulative −11.45%)
+# 3 months (0.19325% each day)
+sim.crash.2 <- function(returns) {
+  # returns         | 12 months of returns
+  # 6 months = day 126
+  returns[126:134] <- returns[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
+  # counter variable
+  i <- 135
+  # recovery period
+  while (i <= 198) {
+    returns[i] <- returns[i] + 0.0019325
+    i <- i + 1
+  }
+  # volatility
+  i <- 126
+  while (i <= 198) {
+    returns[i] <- returns[i] * 1.3
+    i <- i + 1
+  }
+  returns
+}
+
+###############################################
+###                Testing                  ###
+###############################################
+
 # S&P500 Benchmark
 GSPC.r <- diff(log(GSPC$GSPC.Adjusted))[22:nrow(GSPC)]
 
@@ -203,9 +269,26 @@ SR.portfolio <-(mean(portfolio$RTN) * 252)/(sd(portfolio$RTN) * sqrt(252))
 SR.benchmark <-(mean(GSPC.r$GSPC.Adjusted) * 252)/(sd(GSPC.r$GSPC.Adjusted) * sqrt(252))
 # SR.benchmark <- (mean(benchmark$RTN) * 252)/(sd(benchmark$RTN) * sqrt(252))
 
-###############################################
+# Testing Simulations
+dates <- VGT$date[2100:2352]
+# small crash for VGT
+VGT.crash.1 <- sim.crash.1(VGT$RET[2100:2352])
+ETF.R.crash.1 <- ETF.R[2100:2352,]
+ETF.R.crash.1$VGT <- VGT.crash.1
+# large crash for VGT
+VGT.crash.2 <- sim.crash.2(VGT$RET[2100:2352])
+ETF.R.crash.2 <- ETF.R[2100:2352,]
+ETF.R.crash.2$VGT <- VGT.crash.2
+# running simulations
+portfolio.crash.1 <- rebal.risk(dates, ETF.R.crash.1, allocation, 21)
+portfolio.crash.1.bm <- rebal.cap(dates, ETF.R.crash.1, allocation, 21)
+portfolio.crash.2 <- rebal.risk(dates, ETF.R.crash.2, allocation, 21)
+portfolio.crash.2.bm <- rebal.cap(dates, ETF.R.crash.2, allocation, 21)
 
-# Graph
+
+###############################################
+###            Graph Construction           ###
+###############################################
 
 # extract price data
 GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)]
