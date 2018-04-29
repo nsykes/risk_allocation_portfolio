@@ -200,56 +200,90 @@ rebal.cap <- function(dates, returns, desired, days) {
   return
 }
 
+# Converts returns into prices
+r.to.prc <- function(returns) {
+  # dates           | column of dates
+  # returns         | asset returns
+  prices <- data.frame()
+  # counter variable
+  i <- 1
+  while (i <= nrow(returns)) {
+    if (i == 1) {
+      # initial price ($1130.56)
+      prices <- data.frame(1130.56)
+      colnames(prices) <- c("PRC")
+    } else {
+      day.DF <- data.frame(as.numeric(prices$PRC[i-1]) * as.numeric(1 + returns$GSPC.Adjusted[i-1]))
+      colnames(day.DF) <- c("PRC")
+      prices <- rbind(prices, day.DF)
+    }
+    i <- i + 1
+  }
+  prices
+}
+
 ###############################################
 ###           Simulated Scenarios           ###
 ###############################################
 
-# normal crash (+15% volatility)
+# normal crash
 # 6 months normal,
 # 7 days (-3%, -, -3%, -, -1%, -, -1%) (cumulative -7.78%)
 # 2 months (0.19309% each day)
-sim.crash.1 <- function(returns) {
-  # returns         | 12 months of returns
-  # 6 months = day 126
-  returns[126:132] <- returns[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
-  # counter variable
-  i <- 133
-  # recovery period
-  while (i <= 175) {
-    returns[i] <- returns[i] + 0.0019309
-    i <- i + 1
-  }
-  # volatility
-  i <- 126
-  while (i <= 175) {
-    returns[i] <- returns[i] * 1.15
-    i <- i + 1
-  }
-  returns
-}
 
-# large crash (+30% volatility)
+# large crash
 # 6 months normal
 # 9 days (-4%, -, -2%, -, -2%, -, -2%, -, -2%) (cumulative −11.45%)
 # 3 months (0.19325% each day)
-sim.crash.2 <- function(returns) {
+
+# 5 columns: large crash, normal crash, none
+# 5 rows (volatility): +30%, +15%, 0%
+sim.market <- function(returns) {
   # returns         | 12 months of returns
+  sim.returns <- data.frame(returns, returns, returns,
+                            returns, returns, returns,
+                            returns, returns, returns)
+  colnames(sim.returns) <- c("RTN", "RTN.1", "RTN.2", "RTN.3", "RTN.4", "RTN.5", "RTN.6", "RTN.7", "RTN.8")
   # 6 months = day 126
-  returns[126:134] <- returns[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
-  # counter variable
+  # large crash column
+  sim.returns$RTN[126:134] <- sim.returns$RTN[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
+  sim.returns$RTN.3[126:134] <- sim.returns$RTN.3[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
+  sim.returns$RTN.6[126:134] <- sim.returns$RTN.6[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
+  # normal crash column
+  sim.returns$RTN.1[126:132] <- sim.returns$RTN.1[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
+  sim.returns$RTN.4[126:132] <- sim.returns$RTN.4[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
+  sim.returns$RTN.7[126:132] <- sim.returns$RTN.7[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
+  # large crash recovery period
   i <- 135
-  # recovery period
   while (i <= 198) {
-    returns[i] <- returns[i] + 0.0019325
+    sim.returns$RTN[i] <- sim.returns$RTN[i] + 0.0019325
+    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] + 0.0019325
+    sim.returns$RTN.6[i] <- sim.returns$RTN.6[i] + 0.0019325
+    i <- i + 1
+  }
+  # normal crash recovery period
+  i <- 133
+  while (i <= 175) {
+    # normal crash recovery
+    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] + 0.0019309
+    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] + 0.0019309
+    sim.returns$RTN.7[i] <- sim.returns$RTN.7[i] + 0.0019309
     i <- i + 1
   }
   # volatility
   i <- 126
   while (i <= 198) {
-    returns[i] <- returns[i] * 1.3
+    # +30% row
+    sim.returns$RTN[i] <- sim.returns$RTN[i] * 1.3
+    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] * 1.3
+    sim.returns$RTN.2[i] <- sim.returns$RTN.2[i] * 1.3
+    # +15% row
+    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] * 1.15
+    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] * 1.15
+    sim.returns$RTN.5[i] <- sim.returns$RTN.5[i] * 1.15
     i <- i + 1
   }
-  returns
+  sim.returns
 }
 
 ###############################################
@@ -267,24 +301,44 @@ portfolio <- rebal.risk(dates, ETF.R, allocation, 21)
 # Sharpe Ratio
 SR.portfolio <-(mean(portfolio$RTN) * 252)/(sd(portfolio$RTN) * sqrt(252))
 SR.benchmark <-(mean(GSPC.r$GSPC.Adjusted) * 252)/(sd(GSPC.r$GSPC.Adjusted) * sqrt(252))
-# SR.benchmark <- (mean(benchmark$RTN) * 252)/(sd(benchmark$RTN) * sqrt(252))
 
 # Testing Simulations
 dates <- VGT$date[2100:2352]
-# small crash for VGT
-VGT.crash.1 <- sim.crash.1(VGT$RET[2100:2352])
-ETF.R.crash.1 <- ETF.R[2100:2352,]
-ETF.R.crash.1$VGT <- VGT.crash.1
-# large crash for VGT
-VGT.crash.2 <- sim.crash.2(VGT$RET[2100:2352])
-ETF.R.crash.2 <- ETF.R[2100:2352,]
-ETF.R.crash.2$VGT <- VGT.crash.2
-# running simulations
-portfolio.crash.1 <- rebal.risk(dates, ETF.R.crash.1, allocation, 21)
-portfolio.crash.1.bm <- rebal.cap(dates, ETF.R.crash.1, allocation, 21)
-portfolio.crash.2 <- rebal.risk(dates, ETF.R.crash.2, allocation, 21)
-portfolio.crash.2.bm <- rebal.cap(dates, ETF.R.crash.2, allocation, 21)
-
+# VGT simulations
+VGT.sim <- sim.market(VGT$RET[2100:2352])
+ETF.R.sim.1 <- ETF.R[2100:2352,]
+ETF.R.sim.1$VGT <- VGT.sim$RTN
+ETF.R.sim.2 <- ETF.R[2100:2352,]
+ETF.R.sim.2$VGT <- VGT.sim$RTN.1
+ETF.R.sim.3 <- ETF.R[2100:2352,]
+ETF.R.sim.3$VGT <- VGT.sim$RTN.2
+ETF.R.sim.4 <- ETF.R[2100:2352,]
+ETF.R.sim.4$VGT <- VGT.sim$RTN.3
+ETF.R.sim.5<- ETF.R[2100:2352,]
+ETF.R.sim.5$VGT <- VGT.sim$RTN.4
+ETF.R.sim.6 <- ETF.R[2100:2352,]
+ETF.R.sim.6$VGT <- VGT.sim$RTN.5
+ETF.R.sim.7 <- ETF.R[2100:2352,]
+ETF.R.sim.7$VGT <- VGT.sim$RTN.6
+ETF.R.sim.8 <- ETF.R[2100:2352,]
+ETF.R.sim.8$VGT <- VGT.sim$RTN.7
+ETF.R.sim.9 <- ETF.R[2100:2352,]
+ETF.R.sim.9$VGT <- VGT.sim$RTN.8
+# simulations
+portfolio.sim.1 <- rebal.risk(dates, ETF.R.sim.1, allocation, 21)
+portfolio.sim.2 <- rebal.risk(dates, ETF.R.sim.2, allocation, 21)
+portfolio.sim.3 <- rebal.risk(dates, ETF.R.sim.3, allocation, 21)
+portfolio.sim.4 <- rebal.risk(dates, ETF.R.sim.4, allocation, 21)
+portfolio.sim.5 <- rebal.risk(dates, ETF.R.sim.5, allocation, 21)
+portfolio.sim.6 <- rebal.risk(dates, ETF.R.sim.6, allocation, 21)
+portfolio.sim.7 <- rebal.risk(dates, ETF.R.sim.7, allocation, 21)
+portfolio.sim.8 <- rebal.risk(dates, ETF.R.sim.8, allocation, 21)
+portfolio.sim.9 <- rebal.risk(dates, ETF.R.sim.9, allocation, 21)
+# benchmark
+GSPC.r <- diff(log(GSPC$GSPC.Adjusted))[2100:2352]
+colnames(GSPC.r) <- c("RTN")
+# simulation
+GSPC.sim <- sim.market(GSPC.r)
 
 ###############################################
 ###            Graph Construction           ###
