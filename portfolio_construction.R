@@ -228,7 +228,7 @@ r.to.prc <- function(returns) {
 ###############################################
 
 # normal crash
-# 6 months normal,
+# 6 months normal
 # 7 days (-3%, -, -3%, -, -1%, -, -1%) (cumulative -7.78%)
 # 2 months (0.19309% each day)
 
@@ -237,8 +237,8 @@ r.to.prc <- function(returns) {
 # 9 days (-4%, -, -2%, -, -2%, -, -2%, -, -2%) (cumulative −11.45%)
 # 3 months (0.19325% each day)
 
-# 5 columns: large crash, normal crash, none
-# 5 rows (volatility): +30%, +15%, 0%
+# 3 columns: large crash, normal crash, none
+# 3 rows (volatility): +30%, +15%, 0%
 sim.market <- function(returns) {
   # returns         | 12 months of returns
   sim.returns <- data.frame(returns, returns, returns,
@@ -349,6 +349,7 @@ GSPC.sim <- sim.market(GSPC.r)
 GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)]
 portfolio.PRC <- portfolio$PRC
 # define time series
+dates <- VCR$date
 date <- dates[22:length(dates)]
 ts = data.frame("Date" = date,  SP500 = GSPC.PRC,  Portfolio = portfolio.PRC)
 colnames(ts) = c("Date", "SP500", "Portfolio")
