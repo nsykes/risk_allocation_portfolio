@@ -239,49 +239,50 @@ r.to.prc <- function(returns) {
 
 # 3 columns: large crash, normal crash, none
 # 3 rows (volatility): +30%, +15%, 0%
-sim.market <- function(returns) {
+sim.market <- function(returns, scale) {
   # returns         | 12 months of returns
+  # scale           | 0<scale<1
   sim.returns <- data.frame(returns, returns, returns,
                             returns, returns, returns,
                             returns, returns, returns)
   colnames(sim.returns) <- c("RTN", "RTN.1", "RTN.2", "RTN.3", "RTN.4", "RTN.5", "RTN.6", "RTN.7", "RTN.8")
   # 6 months = day 126
   # large crash column
-  sim.returns$RTN[126:134] <- sim.returns$RTN[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
-  sim.returns$RTN.3[126:134] <- sim.returns$RTN.3[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
-  sim.returns$RTN.6[126:134] <- sim.returns$RTN.6[126:134] - c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02)
+  sim.returns$RTN[126:134] <- sim.returns$RTN[126:134] - (c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02) * scale)
+  sim.returns$RTN.3[126:134] <- sim.returns$RTN.3[126:134] - (c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02) * scale)
+  sim.returns$RTN.6[126:134] <- sim.returns$RTN.6[126:134] - (c(0.04, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02) * scale)
   # normal crash column
-  sim.returns$RTN.1[126:132] <- sim.returns$RTN.1[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
-  sim.returns$RTN.4[126:132] <- sim.returns$RTN.4[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
-  sim.returns$RTN.7[126:132] <- sim.returns$RTN.7[126:132] - c(0.03, 0, 0.03, 0, 0.01, 0, 0.01)
+  sim.returns$RTN.1[126:132] <- sim.returns$RTN.1[126:132] - (c(0.03, 0, 0.03, 0, 0.01, 0, 0.01) * scale)
+  sim.returns$RTN.4[126:132] <- sim.returns$RTN.4[126:132] - (c(0.03, 0, 0.03, 0, 0.01, 0, 0.01) * scale)
+  sim.returns$RTN.7[126:132] <- sim.returns$RTN.7[126:132] - (c(0.03, 0, 0.03, 0, 0.01, 0, 0.01) * scale)
   # large crash recovery period
   i <- 135
   while (i <= 198) {
-    sim.returns$RTN[i] <- sim.returns$RTN[i] + 0.0019325
-    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] + 0.0019325
-    sim.returns$RTN.6[i] <- sim.returns$RTN.6[i] + 0.0019325
+    sim.returns$RTN[i] <- sim.returns$RTN[i] + 0.0019325 * scale
+    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] + 0.0019325 * scale
+    sim.returns$RTN.6[i] <- sim.returns$RTN.6[i] + 0.0019325 * scale
     i <- i + 1
   }
   # normal crash recovery period
   i <- 133
   while (i <= 175) {
     # normal crash recovery
-    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] + 0.0019309
-    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] + 0.0019309
-    sim.returns$RTN.7[i] <- sim.returns$RTN.7[i] + 0.0019309
+    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] + 0.0019309 * scale
+    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] + 0.0019309 * scale
+    sim.returns$RTN.7[i] <- sim.returns$RTN.7[i] + 0.0019309 * scale
     i <- i + 1
   }
   # volatility
   i <- 126
   while (i <= 198) {
     # +30% row
-    sim.returns$RTN[i] <- sim.returns$RTN[i] * 1.3
-    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] * 1.3
-    sim.returns$RTN.2[i] <- sim.returns$RTN.2[i] * 1.3
+    sim.returns$RTN[i] <- sim.returns$RTN[i] * (1 + 0.3 * scale)
+    sim.returns$RTN.1[i] <- sim.returns$RTN.1[i] * (1 + 0.3 * scale)
+    sim.returns$RTN.2[i] <- sim.returns$RTN.2[i] * (1 + 0.3 * scale)
     # +15% row
-    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] * 1.15
-    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] * 1.15
-    sim.returns$RTN.5[i] <- sim.returns$RTN.5[i] * 1.15
+    sim.returns$RTN.3[i] <- sim.returns$RTN.3[i] * (1 + 0.15 * scale)
+    sim.returns$RTN.4[i] <- sim.returns$RTN.4[i] * (1 + 0.15 * scale)
+    sim.returns$RTN.5[i] <- sim.returns$RTN.5[i] * (1 + 0.15 * scale)
     i <- i + 1
   }
   sim.returns
@@ -306,7 +307,7 @@ SR.benchmark <-(mean(GSPC.r$GSPC.Adjusted) * 252)/(sd(GSPC.r$GSPC.Adjusted) * sq
 # Testing Simulations
 dates <- VGT$date[2100:2352]
 # VGT simulations
-VGT.sim <- sim.market(VGT$RET[2100:2352])
+VGT.sim <- sim.market(VGT$RET[2100:2352], 1)
 ETF.R.sim.1 <- ETF.R[2100:2352,]
 ETF.R.sim.1$VGT <- VGT.sim$RTN
 ETF.R.sim.2 <- ETF.R[2100:2352,]
@@ -339,7 +340,7 @@ portfolio.sim.9 <- rebal.risk(dates, ETF.R.sim.9, allocation, 21)
 GSPC.r <- diff(log(GSPC$GSPC.Adjusted))[2100:2352]
 colnames(GSPC.r) <- c("RTN")
 # simulation
-GSPC.sim <- sim.market(GSPC.r)
+GSPC.sim <- sim.market(GSPC.r, 0.25)
 
 ###############################################
 ###            Graph Construction           ###
