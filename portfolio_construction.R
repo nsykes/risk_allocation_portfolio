@@ -353,7 +353,7 @@ portfolio.PRC <- portfolio$PRC
 dates <- VCR$date
 date <- dates[22:length(dates)]
 ts = data.frame("Date" = date,  SP500 = GSPC.PRC,  Portfolio = portfolio.PRC)
-colnames(ts) = c("Date", "SP500", "Portfolio")
+colnames(ts) = c("Date", "SP500 (GSPC)", "WTRAF")
 # data pre-process (melt into ggplot compatible form)
 ts <- melt(ts, id.vars = "Date", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Assets", value.name = "Price")
 ts$Date = as.Date(ts$Date, format = "%Y.%m.%d")
@@ -361,7 +361,7 @@ colnames(ts) = c("Date", "Assets", "Price")
 
 # ggplot
 p <- ggplot(ts,aes(x= Date, y = Price, group = Assets))
-colour_labels = c("violet","green")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
+colour_labels = c("#154783","#649DE7")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
 p <- p + geom_line(aes(colour= Assets, linetype = "solid"),size = 1.1)
-p <- p + labs(x="Date", y="Price")+scale_x_date(breaks = date_breaks("2 years"),labels = date_format("%Y %m"))+ ggtitle("Comparison Between SP500 and Portfolio")
-p
+p <- p + labs(x="Date", y="Price")+scale_x_date(breaks = date_breaks("2 years"),labels = date_format("%Y"))+ ggtitle("S&P500 vs WTRAF")
+p + scale_color_manual(values=colour_labels)
