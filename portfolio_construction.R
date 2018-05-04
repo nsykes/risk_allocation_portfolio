@@ -124,8 +124,8 @@ rebal.risk <- function(dates, returns, desired, days) {
       # adjust current allocation
       # yesterday's allocation * yesterday's returns, then normalize
       current.alloc <- (current.alloc * (1+returns[i-1,]))/sum(current.alloc * (1+returns[i-1,]))
-      # get day's return
-      day.R <- sum(returns[i,] * current.alloc)-0.00001584147
+      # get day's return (taking out management fees)
+      day.R <- sum(returns[i,] * current.alloc) - 0.00001584147
       # calculate today's price from yesterday's price and yesterday's return
       day.PRC <- portfolio$PRC[i-days-1] * (1 + portfolio$RTN[i-days-1])
       # combine into data.frame and merge
