@@ -303,6 +303,8 @@ GSPC.r <- diff(log(GSPC$GSPC.Adjusted))[22:nrow(GSPC)]
 # Testing Function
 dates <- VCR$date
 portfolio <- rebal.risk(dates, ETF.R, allocation, 21)
+# standardize
+portfolio$PRC <- portfolio$PRC * 1000/1130.56
 # benchmark <- rebal.cap(dates, ETF.R, allocation, 21)
 
 # Sharpe Ratio
@@ -352,7 +354,7 @@ GSPC.sim <- sim.market(GSPC.r, 0.25)
 ###############################################
 
 # extract price data
-GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)]
+GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)] * 1000/1130.56
 portfolio.PRC <- portfolio$PRC
 
 # GRAPH: WTRAF vs S&P500 (p)
@@ -419,12 +421,18 @@ i
 dates <- VCR$date
 date <- dates[818:1448]
 # create data frame
-ts <- data.frame("Year" = date, Portfolio = portfolio.PRC[797:1427])
-colnames(ts) = c("Year", "Price")
+ts <- data.frame("Year" = date, SP500 = GSPC.PRC[797:1427], WTRAF = portfolio.PRC[797:1427])
+colnames(ts) = c("Year", "SP500 (GSPC)", "WTRAF")
+# data pre-process (melt into ggplot compatible form)
+ts <- melt(ts, id.vars = "Year", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Assets", value.name = "Price")
 ts$Year = as.Date(ts$Year, format = "%Y.%m.%d")
-crash <- ggplot(ts,aes(x= Year, y = Price))
-crash <- crash + geom_line(aes(),size = 1.1)
-crash <- crash + labs(x="Year", y="Price")+scale_x_date(breaks = date_breaks("3 months"),labels = date_format("%b %y"))+ ggtitle("WTRAF during financial crisis")
+colnames(ts) = c("Year", "Assets", "Price")
+# ggplot
+crash <- ggplot(ts,aes(x= Year, y = Price, group = Assets))
+colour_labels = c("#154783","#649DE7")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
+crash <- crash + geom_line(aes(colour= Assets),size = 1.1)
+crash <- crash + scale_color_manual(values=colour_labels)
+crash <- crash + labs(x="Year", y="Price")+scale_x_date(breaks = date_breaks("3 months"),labels = date_format("%b %y"))+ ggtitle("S&P500 vs WTRAF during financial crisis")
 crash <- crash + theme(axis.text.x = element_text(colour="grey20",size=13,angle=45,hjust=.5,vjust=.5), 
                        axis.text.y = element_text(colour="grey20",size=12,angle=0,hjust=.5,vjust=.5),
                        axis.title.x = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5),
