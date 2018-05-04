@@ -19,7 +19,7 @@ library(scales)
 ###############################################
 
 # Working Directory (change as necessary)
-setwd('/home/nyle/Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/')
+setwd('/home/nyle/Dropbox/MIT/Freshman Year/15.417/risk_allocation_portfolio/data/')
 
 # Import Data
 VCR <- read_csv("VCR.csv", 
@@ -125,7 +125,7 @@ rebal.risk <- function(dates, returns, desired, days) {
       # yesterday's allocation * yesterday's returns, then normalize
       current.alloc <- (current.alloc * (1+returns[i-1,]))/sum(current.alloc * (1+returns[i-1,]))
       # get day's return
-      day.R <- sum(returns[i,] * current.alloc)
+      day.R <- sum(returns[i,] * current.alloc)-0.00001584147
       # calculate today's price from yesterday's price and yesterday's return
       day.PRC <- portfolio$PRC[i-days-1] * (1 + portfolio$RTN[i-days-1])
       # combine into data.frame and merge
@@ -144,8 +144,13 @@ rebal.risk <- function(dates, returns, desired, days) {
       # compute covariance, convert to normalized risk
       cv <- cov(trailing.window)
       cv.risks <- (rowSums(cv) / sum(rowSums(cv))) * 100
+      # turnover costs (0.5% * turnover)
+      new.alloc <- (desired/cv.risks)/sum(desired/cv.risks)
+      turnover <- sum(abs(current.alloc-new.alloc))
+      turnover.cost <- turnover * 0.005
+      portfolio$RTN[i-days] <- portfolio$RTN[i-days] - turnover.cost
       # change risks to capital allocation
-      current.alloc <- (desired/cv.risks)/sum(desired/cv.risks)
+      current.alloc <- new.alloc
     }
     i <- i + 1
   }
@@ -349,19 +354,79 @@ GSPC.sim <- sim.market(GSPC.r, 0.25)
 # extract price data
 GSPC.PRC <- GSPC$GSPC.Adjusted[22:nrow(GSPC)]
 portfolio.PRC <- portfolio$PRC
-# define time series
+
+# GRAPH: WTRAF vs S&P500 (p)
 dates <- VCR$date
 date <- dates[22:length(dates)]
-ts = data.frame("Date" = date,  SP500 = GSPC.PRC,  Portfolio = portfolio.PRC)
-colnames(ts) = c("Date", "SP500 (GSPC)", "WTRAF")
+# create data frame
+ts = data.frame("Year" = date,  SP500 = GSPC.PRC,  Portfolio = portfolio.PRC)
+colnames(ts) = c("Year", "SP500 (GSPC)", "WTRAF")
 # data pre-process (melt into ggplot compatible form)
-ts <- melt(ts, id.vars = "Date", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Assets", value.name = "Price")
-ts$Date = as.Date(ts$Date, format = "%Y.%m.%d")
-colnames(ts) = c("Date", "Assets", "Price")
-
+ts <- melt(ts, id.vars = "Year", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Assets", value.name = "Price")
+ts$Year = as.Date(ts$Year, format = "%Y.%m.%d")
+colnames(ts) = c("Year", "Assets", "Price")
 # ggplot
-p <- ggplot(ts,aes(x= Date, y = Price, group = Assets))
+p <- ggplot(ts,aes(x= Year, y = Price, group = Assets))
 colour_labels = c("#154783","#649DE7")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
-p <- p + geom_line(aes(colour= Assets, linetype = "solid"),size = 1.1)
-p <- p + labs(x="Date", y="Price")+scale_x_date(breaks = date_breaks("2 years"),labels = date_format("%Y"))+ ggtitle("S&P500 vs WTRAF")
-p + scale_color_manual(values=colour_labels)
+p <- p + geom_line(aes(colour= Assets),size = 1.1)
+p <- p + labs(x="Year", y="Price")+scale_x_date(breaks = date_breaks("1 year"),labels = date_format("%Y"))+ ggtitle("S&P500 vs WTRAF")
+p <- p + scale_color_manual(values=colour_labels)
+p <- p + theme(axis.text.x = element_text(colour="grey20",size=13,angle=45,hjust=.5,vjust=.5), 
+                        axis.text.y = element_text(colour="grey20",size=12,angle=0,hjust=.5,vjust=.5),
+                        axis.title.x = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5),
+                        axis.title.y = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5))
+p
+
+# GRAPH: WTRAF (cover)
+dates <- VCR$date
+date <- dates[22:length(dates)]
+# create data frame
+ts <- data.frame("Year" = date, Portfolio = portfolio.PRC)
+colnames(ts) = c("Year", "Price")
+ts$Year = as.Date(ts$Year, format = "%Y.%m.%d")
+cover <- ggplot(ts,aes(x= Year, y = Price))
+cover <- cover + geom_line(aes(),size = 1.1)
+cover <- cover + labs(x="Year", y="Price")+scale_x_date(breaks = date_breaks("1 year"),labels = date_format("%Y"))+ ggtitle("WTRAF")
+cover <- cover + theme(axis.text.x = element_text(colour="grey20",size=13,angle=45,hjust=.5,vjust=.5), 
+                axis.text.y = element_text(colour="grey20",size=12,angle=0,hjust=.5,vjust=.5),
+                axis.title.x = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5),
+                axis.title.y = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5))
+cover
+
+# GRAPH: VGT scenarios (i)
+dates <- VCR$date
+date <- dates[2100:2352]
+# create data frame
+ts = data.frame("Date" = date,  s1 = ETF.R.sim.1$VGT, s2 = ETF.R.sim.3$VGT, s3 = ETF.R.sim.9$VGT)
+colnames(ts) = c("Date", "Large Crash, +30% Volatility", "No Crash, +30% Volatility", "Normal")
+# data pre-process (melt into ggplot compatible form)
+ts <- melt(ts, id.vars = "Date", measure.vars = colnames(ts)[2:ncol(ts)], variable.name = "Scenarios", value.name = "Return")
+ts$Date = as.Date(ts$Date, format = "%Y.%m.%d")
+colnames(ts) = c("Year", "Scenarios", "Return")
+# ggplot
+i <- ggplot(ts,aes(x= Year, y = Return, group = Scenarios))
+colour_labels = c("red","#e29c22", "#2364b2")  #"blue","red","firebrick","gray75","seagreen","violet","green","gold","orange","grey1", and etc...
+i <- i + geom_line(aes(colour= Scenarios),size = 0.5)
+i <- i + labs(x="Date", y="Return")+scale_x_date(breaks = date_breaks("1 month"),labels = date_format("%b %y"))+ ggtitle("Information Technology Industry Scenarios")
+i <- i + scale_color_manual(values=colour_labels)
+i <- i + theme(axis.text.x = element_text(colour="grey20",size=13,angle=45,hjust=.5,vjust=.5), 
+                axis.text.y = element_text(colour="grey20",size=13,angle=0,hjust=.5,vjust=.5),
+                axis.title.x = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5),
+                axis.title.y = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5))
+i
+
+# GRAPH: 2008 prices (e)
+dates <- VCR$date
+date <- dates[818:1448]
+# create data frame
+ts <- data.frame("Year" = date, Portfolio = portfolio.PRC[797:1427])
+colnames(ts) = c("Year", "Price")
+ts$Year = as.Date(ts$Year, format = "%Y.%m.%d")
+crash <- ggplot(ts,aes(x= Year, y = Price))
+crash <- crash + geom_line(aes(),size = 1.1)
+crash <- crash + labs(x="Year", y="Price")+scale_x_date(breaks = date_breaks("3 months"),labels = date_format("%b %y"))+ ggtitle("WTRAF during financial crisis")
+crash <- crash + theme(axis.text.x = element_text(colour="grey20",size=13,angle=45,hjust=.5,vjust=.5), 
+                       axis.text.y = element_text(colour="grey20",size=12,angle=0,hjust=.5,vjust=.5),
+                       axis.title.x = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5),
+                       axis.title.y = element_text(colour="grey20",size=15,angle=0,hjust=.5,vjust=.5))
+crash

@@ -6,8 +6,12 @@ This portfolio allocates capital based on risk contribution to the entire portfo
 
 This builds off of previous work in risk parity portfolios across various asset classes by extending it to different industries, rather than different asset classes, and defining specific risk contribution vectors.
 
-Performance of our portfolio versus the S&P500 over a 13 year period.
+Performance of our portfolio over a 13 year period.
 
-![](performance.png)
+![](graphs/performance.png)
+
+Performance of our portfolio versus its benchmark, the S&P500, over this period.
+
+![](graphs/comparison.png)
 
 This is a work in progress.
