@@ -57,7 +57,7 @@ VPU <- read_csv("VPU.csv",
                                  date = col_datetime(format = "%Y%m%d")))
 
 # Load Data for S&P500
-symbol="^GSPC" 
+symbol="^GSPC"
 startday=as.Date("2004-10-04")
 endday=as.Date("2017-12-30")
 getSymbols(symbol, src = "yahoo",from = startday, to = endday)
